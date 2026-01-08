@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('user.{id}', function ($user, $id) {
+Broadcast::channel('{env}.user.{id}', function ($user, $env, $id) {
     return (int) $user->id === (int) $id;
 });
 
