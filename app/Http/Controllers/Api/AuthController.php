@@ -86,7 +86,7 @@ class AuthController extends Controller
     public function users() {
 
         return response()->json([
-            'users' => User::all(),
+            'users' => User::with('department')->get(),
         ]);
     }
 
