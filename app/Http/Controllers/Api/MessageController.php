@@ -9,6 +9,8 @@ use App\Models\Activity;
 use Illuminate\Http\Request;
 use App\Events\NewMessage;
 use App\Events\ChatCreated;
+use App\Events\NotificationCreated;
+use App\Models\Notification;
 
 class MessageController extends Controller
 {
@@ -201,7 +203,31 @@ class MessageController extends Controller
             );
         }
 
-        broadcast(new NewMessage($message));
+        $userIds = collect($validated['assignees'] ?? [])
+        ->push($validated['assignee'] ?? null) // add single assignee
+        ->filter()                             // remove nulls
+        ->unique()                             // remove duplicates
+        ->values()                             // reset keys
+        ->toArray();
+
+        // Notify recipient(s)
+        $notification = Notification::createWithRecipients(
+            title: "Neue Nachricht: " . $message->title . "von " . $user->name,
+            body: $message->description,
+            type: "message_created",
+            messageId: $message->id,
+            creatorId: auth()->id(),
+            userIds: $userIds
+        );
+
+        foreach ($notification->recipients as $recipient) {
+            broadcast(new NotificationCreated(
+                recipient: $recipient,
+                notification: $notification
+            ))->toOthers();
+        }
+
+        // broadcast(new NewMessage($message));
     
         return response()->json([
             'message' => 'Nachricht erfolgreich erstellt',
@@ -414,21 +440,56 @@ class MessageController extends Controller
             'text' => 'required|string|max:2000',
         ]);
 
+        $user = $request->user();
+
         $comment = $message->chatMessages()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'content' => $request->text,
         ]);
 
         $comment = $comment->load('user:id,name', 'message');
 
-        broadcast(new ChatCreated($comment));
+        // broadcast(new ChatCreated($comment));
 
         // Optional: log activity
         $message->activities()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'action' => 'added a comment',
             'assignee_id' => null,
         ]);
+
+        // -----------------------------
+        // Notification logic
+        // -----------------------------
+
+        // Merge recipients: message creator + assignees (excluding current user)
+        $assignees = $message->assignees()->pluck('users.id')->toArray(); // array of user IDs
+        $creatorId = $message->creator_id;
+
+        $userIds = collect($assignees)
+            ->push($creatorId)
+            ->filter(fn($id) => $id !== $user->id) // exclude commenter
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (!empty($userIds)) {
+            $notification = Notification::createWithRecipients(
+                title: $user->name . " hat auf " . $message->title . " kommentiert",
+                body: $comment->content,
+                type: "comment_created",
+                messageId: $message->id,
+                creatorId: $user->id,
+                userIds: $userIds
+            );
+
+            foreach ($notification->recipients as $recipient) {
+                broadcast(new NotificationCreated(
+                    recipient: $recipient,
+                    notification: $notification
+                ))->toOthers();
+            }
+        }
 
         return response()->json([
             'message' => 'Kommentar erfolgreich hinzugefügt',

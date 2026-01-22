@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -22,6 +23,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/users', [AuthController::class, 'users']);
     Route::get('/departments', [DepartmentController::class, 'index']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{recipient}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{recipient}', [NotificationController::class, 'destroy']);
 
     Route::get('/created', [MessageController::class, 'created']);
     Route::get('/assigned', [MessageController::class, 'assigned']);
