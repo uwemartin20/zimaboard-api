@@ -79,4 +79,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Activity::class);
     }
+
+    public function pushTokens()
+    {
+        return $this->hasMany(PushToken::class);
+    }
 }

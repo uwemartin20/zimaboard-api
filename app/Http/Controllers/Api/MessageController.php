@@ -9,6 +9,7 @@ use App\Models\Activity;
 use Illuminate\Http\Request;
 use App\Events\NewMessage;
 use App\Events\ChatCreated;
+use App\Services\ExpoPushService;
 use App\Events\NotificationCreated;
 use App\Models\Notification;
 
@@ -225,6 +226,18 @@ class MessageController extends Controller
                 recipient: $recipient,
                 notification: $notification
             ))->toOthers();
+
+            $tokens = $recipient->user->pushTokens()->pluck('token')->filter()->toArray();
+
+            ExpoPushService::send(
+                $tokens,
+                'Neue Nachricht Erhalten',
+                $user->name . ' hat ein Nachricht "' . $message->title . '" Erstellt.',
+                [
+                    'type' => 'chat',
+                    'messageId' => $message->id,
+                ]
+            );
         }
 
         // broadcast(new NewMessage($message));
@@ -488,6 +501,18 @@ class MessageController extends Controller
                     recipient: $recipient,
                     notification: $notification
                 ))->toOthers();
+
+                $tokens = $recipient->user->pushTokens()->pluck('token')->filter()->toArray();
+
+                ExpoPushService::send(
+                    $tokens,
+                    'Neue kommentar',
+                    $user->name . ' hat auf "' . $message->title . '" kommentiert.',
+                    [
+                        'type' => 'chat',
+                        'messageId' => $message->id,
+                    ]
+                );
             }
         }
 

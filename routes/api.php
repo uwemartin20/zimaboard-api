@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PushTokenController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -57,6 +58,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class)
             ->only(['index', 'store', 'update', 'destroy']);
     });
+
+    Route::post('/push-token', [PushTokenController::class, 'store']);
 });
 
 // Route::get('/user', function (Request $request) {
